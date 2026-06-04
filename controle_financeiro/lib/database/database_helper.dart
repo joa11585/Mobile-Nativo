@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -14,28 +15,37 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    // Usar getApplicationDocumentsDirectory para melhor compatibilidade
+    final directory = await getApplicationDocumentsDirectory();
+    final path = '${directory.path}/$filePath';
 
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _createDB,
+    );
   }
 
-  Future _createDB(Database db, int version) async {
+  Future<void> _createDB(Database db, int version) async {
     await db.execute('''
       CREATE TABLE usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
-        email TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
         senha TEXT NOT NULL
       )
     ''');
+    
     await db.execute('''
       CREATE TABLE transacoes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER NOT NULL,
         titulo TEXT NOT NULL,
         valor REAL NOT NULL,
         data TEXT NOT NULL,
-        tipo TEXT NOT NULL
+        tipo TEXT NOT NULL,
+        categoria TEXT,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
       )
     ''');
   }
